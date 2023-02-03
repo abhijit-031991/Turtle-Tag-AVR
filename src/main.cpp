@@ -12,6 +12,8 @@
 #include <avr/sleep.h>
 #include <MCP79412RTC.h>
 #include <DFRobot_LIS2DW12.h>
+#include <MPR121.h>
+
 
 void setup() {
   // put your setup code here, to run once:
