@@ -46,7 +46,6 @@ struct data{
     float lat;
     float lng;
     byte hdop;
-    bool act;
   };
 
 struct ping{
@@ -59,20 +58,20 @@ struct ping{
   }; 
 
 struct setttings{
-        uint32_t pingTime;
-        uint16_t act_trsh;
-        uint16_t act_gps_frq;
-        uint16_t act_duration;
-        uint16_t gpsFrq;
-        uint16_t gpsTout;
-        uint8_t hdop;
-        uint8_t radioFrq;
-        uint8_t rcv_dur;
-        uint8_t sch_dur;
-        uint8_t sch_rpt_dur;
-        bool act_enabled;
-        bool sch_enabled;
-      } __attribute__((__packed__));
+    uint32_t pingTime;
+    uint16_t act_trsh;
+    uint16_t act_gps_frq;
+    uint16_t act_duration;
+    uint16_t gpsFrq;
+    uint16_t gpsTout;
+    uint8_t hdop;
+    uint8_t radioFrq;
+    uint8_t rcv_dur;
+    uint8_t sch_dur;
+    uint8_t sch_rpt_dur;
+    bool act_enabled;
+    bool sch_enabled;
+  } __attribute__((__packed__));
 
 
 
