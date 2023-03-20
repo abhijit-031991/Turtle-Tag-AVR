@@ -6,8 +6,8 @@
 
 // Device ID //
 
-const uint16_t tag = 10109;
-const uint8_t devType = 107;
+const uint16_t tag = 20102;
+const uint8_t devType = 105;
 
 // Firmware Version //
 const float firmwareVersion = 2.0;
@@ -17,8 +17,7 @@ const float firmwareVersion = 2.0;
 #define GPS_PIN PIN_PC3
 #define RTC_PIN PIN_PD7
 #define RINT PIN_PD6
-#define AINT1 PIN_PD4
-#define AINT2 PIN_PD5
+#define SINT PIN_PD1
 #define LCS PIN_PA7
 #define FCS PIN_PC2
 #define LRST PIN_PA3
