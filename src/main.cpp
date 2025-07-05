@@ -72,10 +72,37 @@ const uint8_t MPR121_INT = 2;
 uint8_t touch_trsh = 75;          // Touch Threshold *** USER CONFIG ***
 uint8_t release_trsh = 70;        // Release Threshold *** USER CONFIG ***
 
+// Control Variables //
+uint16_t pingSecondCounter;
+uint16_t gpsSecondCounter;
+uint16_t pingCounterTarget;
+uint16_t gpsCounterTarget;
 
 //#####################################################################################################//
 
 //*** Functions ***//
+void RTC_init(void)
+{
+  /* Initialize RTC: */
+  while (RTC.STATUS > 0)
+  {
+    ;                                   /* Wait for all register to be synchronized */
+  }
+  RTC.CLKSEL = RTC_CLKSEL_INT32K_gc;    /* 32.768kHz Internal Ultra-Low-Power Oscillator (OSCULP32K) */
+
+  RTC.PITINTCTRL = RTC_PI_bm;           /* PIT Interrupt: enabled */
+
+  RTC.PITCTRLA = RTC_PERIOD_CYC32768_gc /* RTC Clock Cycles 16384, resulting in 32.768kHz/16384 = 2Hz */
+  | RTC_PITEN_bm;                       /* Enable PIT counter: enabled */
+}
+
+ISR(RTC_PIT_vect)
+{
+  RTC.PITINTFLAGS = RTC_PI_bm;          /* Clear interrupt flag by writing '1' (required) */
+  pingSecondCounter = pingSecondCounter + 1;
+  gpsSecondCounter = gpsSecondCounter + 1;
+}
+
 // Function 1 : Record and Store GPS data
 void recGPS(){
   mTime = 0;
@@ -569,58 +596,60 @@ void setup() {
   Wire.swapModule(&TWI1);
   Wire.usePullups();
   Wire.begin();
+  RTC_init();
+
   //***********************************************//
-  if (!MPR121.begin(MPR121_ADDR)) {
-    Serial.println(F("error setting up MPR121"));
-    switch (MPR121.getError()) {
-      case NO_ERROR:
-        Serial.println(F("no error"));
-        break;
-      case ADDRESS_UNKNOWN:
-        Serial.println(F("incorrect address"));
-        break;
-      case READBACK_FAIL:
-        Serial.println(F("readback failure"));
-        break;
-      case OVERCURRENT_FLAG:
-        Serial.println(F("overcurrent on REXT pin"));
-        break;
-      case OUT_OF_RANGE:
-        Serial.println(F("electrode out of range"));
-        break;
-      case NOT_INITED:
-        Serial.println(F("not initialised"));
-        break;
-      default:
-        Serial.println(F("unknown error"));
-        break;
-    }
-    while (1);
-  }
-  MPR121.setInterruptPin(MPR121_INT);
-  MPR121.setSamplePeriod(SAMPLE_INTERVAL_32MS);
+  // if (!MPR121.begin(MPR121_ADDR)) {
+  //   Serial.println(F("error setting up MPR121"));
+  //   switch (MPR121.getError()) {
+  //     case NO_ERROR:
+  //       Serial.println(F("no error"));
+  //       break;
+  //     case ADDRESS_UNKNOWN:
+  //       Serial.println(F("incorrect address"));
+  //       break;
+  //     case READBACK_FAIL:
+  //       Serial.println(F("readback failure"));
+  //       break;
+  //     case OVERCURRENT_FLAG:
+  //       Serial.println(F("overcurrent on REXT pin"));
+  //       break;
+  //     case OUT_OF_RANGE:
+  //       Serial.println(F("electrode out of range"));
+  //       break;
+  //     case NOT_INITED:
+  //       Serial.println(F("not initialised"));
+  //       break;
+  //     default:
+  //       Serial.println(F("unknown error"));
+  //       break;
+  //   }
+  //   while (1);
+  // }
+  // MPR121.setInterruptPin(MPR121_INT);
+  // MPR121.setSamplePeriod(SAMPLE_INTERVAL_32MS);
 
-  MPR121.setTouchThreshold(touch_trsh);
-  MPR121.setReleaseThreshold(release_trsh);
-  MPR121.autoSetElectrodes();
+  // MPR121.setTouchThreshold(touch_trsh);
+  // MPR121.setReleaseThreshold(release_trsh);
+  // MPR121.autoSetElectrodes();
 
-  if(!acce.begin()){
-     Serial.println(F("Communication failed, check the connection and I2C address setting when using I2C communication."));
-     delay(1000);
-  }else{
-  Serial.print(F("chip id : "));
-  Serial.println(acce.getID(),HEX);
-  }
-  acce.softReset();
-  acce.setRange(DFRobot_LIS2DW12::e4_g);
-  acce.setFilterPath(DFRobot_LIS2DW12::eLPF);
-  acce.setFilterBandwidth(DFRobot_LIS2DW12::eRateDiv_4);
-  acce.setWakeUpDur(/*dur = */2);
-  acce.setWakeUpThreshold(/*threshold = */0.3);
-  acce.setPowerMode(DFRobot_LIS2DW12::eContLowPwrLowNoise1_12bit);
-  acce.setActMode(DFRobot_LIS2DW12::eDetectAct);
-  acce.setInt1Event(DFRobot_LIS2DW12::eWakeUp);
-  acce.setDataRate(DFRobot_LIS2DW12::eRate_100hz);
+  // if(!acce.begin()){
+  //    Serial.println(F("Communication failed, check the connection and I2C address setting when using I2C communication."));
+  //    delay(1000);
+  // }else{
+  // Serial.print(F("chip id : "));
+  // Serial.println(acce.getID(),HEX);
+  // }
+  // acce.softReset();
+  // acce.setRange(DFRobot_LIS2DW12::e4_g);
+  // acce.setFilterPath(DFRobot_LIS2DW12::eLPF);
+  // acce.setFilterBandwidth(DFRobot_LIS2DW12::eRateDiv_4);
+  // acce.setWakeUpDur(/*dur = */2);
+  // acce.setWakeUpThreshold(/*threshold = */0.3);
+  // acce.setPowerMode(DFRobot_LIS2DW12::eContLowPwrLowNoise1_12bit);
+  // acce.setActMode(DFRobot_LIS2DW12::eDetectAct);
+  // acce.setInt1Event(DFRobot_LIS2DW12::eWakeUp);
+  // acce.setDataRate(DFRobot_LIS2DW12::eRate_100hz);
   
   //***********************************************//
   LoRa.setPins(LCS, LRST, LDIO0);
@@ -667,23 +696,30 @@ void setup() {
     Serial.println(flash.error(VERBOSE));
   }
 
-  //***********************************************//
+  // //***********************************************//
   
-  digitalWrite(RTC_PIN, HIGH);
-  rtc.set(strtTime);
-  Serial.println(rtc.get());
-  delay(100);
-  rtc.alarmPolarity(HIGH);
-  rtc.setAlarm(0, strtTime + 60*gpsFrequency);  
-  next_gps_wakeup = strtTime + 60*gpsFrequency;
-  Serial.println(next_gps_wakeup);
-  rtc.enableAlarm(0, ALM_MATCH_DATETIME);
-  rtc.enableAlarm(1, ALM_MATCH_DATETIME);
-  digitalWrite(RTC_PIN, LOW);
-  delay(100);
-  //***********************************************//
-  attachInterrupt(digitalPinToInterrupt(RINT), risr, CHANGE);
+  // digitalWrite(RTC_PIN, HIGH);
+  // rtc.set(strtTime);
+  // Serial.println(rtc.get());
+  // delay(100);
+  // rtc.alarmPolarity(HIGH);
+  // rtc.setAlarm(0, strtTime + 60*gpsFrequency);  
+  // next_gps_wakeup = strtTime + 60*gpsFrequency;
+  // Serial.println(next_gps_wakeup);
+  // rtc.enableAlarm(0, ALM_MATCH_DATETIME);
+  // rtc.enableAlarm(1, ALM_MATCH_DATETIME);
+  // digitalWrite(RTC_PIN, LOW);
+  // delay(100);
+  // //***********************************************//
+  // attachInterrupt(digitalPinToInterrupt(RINT), risr, CHANGE);
   attachInterrupt(digitalPinToInterrupt(SINT), sisr, CHANGE);
+  //***********************************************//
+
+  gpsCounterTarget = gpsFrequency*60;
+  pingCounterTarget = radioFrequency*60;  
+  gpsSecondCounter = gpsCounterTarget + 1;
+  pingSecondCounter = pingCounterTarget + 1;
+
   //***********************************************//
   Serial.println("SYSTEM READY");
   Serial.flush();
@@ -695,7 +731,9 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.println(F("AWAKE"));
+  if (gpsSecondCounter >= gpsCounterTarget){
+    Serial.println(F("AWAKE"));
+  }
   //**************************************************************//
   if (mpr_int_triggered == true)
   {
@@ -704,58 +742,26 @@ void loop() {
   }
   if (surface)
   {
-    Ping(lat, lng, tag, devType, cnt);
-    receive(5000);
-    digitalWrite(RTC_PIN, HIGH);
-    Serial.println(rtc.get());
-    time_t prevTime = rtc.get();
-    delay(10); 
-    rtc.alarmPolarity(HIGH);
-    rtc.setAlarm(1, prevTime + 60*radioFrequency);
-    rtc.enableAlarm(1, ALM_MATCH_DATETIME);
-    delay(10);
-    
-
-    if(rtc.alarm(0)){
-      Serial.println(F("ALARM 0"));
-      time_t prevTime = rtc.get();      
-      Serial.println(rtc.get());
-      delay(10);
-      rtc.alarmPolarity(HIGH);
-      rtc.setAlarm(0, prevTime + 60*gpsFrequency);     
-      rtc.enableAlarm(0, ALM_MATCH_DATETIME);
-      gps_wait_time = false;
-    }
-    digitalWrite(RTC_PIN, LOW);
-
-    if (gps_wait_time == false)
+    if (gpsSecondCounter >= gpsCounterTarget)
     {
-      Serial.println(F("GPS Fixing"));
       recGPS();
-      gps_wait_time = true;      
+      gpsSecondCounter = 0;
+      if ((mTime/1000) < (gpsFrequency*60))
+      {
+        gpsCounterTarget = (gpsFrequency*60)-(mTime/1000);
+      }else{
+        gpsCounterTarget = gpsFrequency*60;
+      }
     }
-  }  
-  //**************************************************************//
-  digitalWrite(RTC_PIN, HIGH);
-  Serial.println(F("Sleeping"));
-  if(rtc.alarm(0)){
-    Serial.println(F("ALARM 0"));
-  }
-  if(rtc.alarm(1)){
-    Serial.println(F("ALARM 1"));
-    digitalWrite(RTC_PIN, HIGH);
-    Serial.println(rtc.get());
-    time_t prevTime = rtc.get();
-    delay(10); 
-    rtc.alarmPolarity(HIGH);
-    rtc.setAlarm(1, prevTime + 20);
-    rtc.enableAlarm(1, ALM_MATCH_DATETIME);
-    delay(10);
+    if (pingSecondCounter >= pingCounterTarget)
+    {
+      Ping(lat, lng, tag, devType, cnt);
+      receive(5000);
+      pingSecondCounter = 0;
+    }
   }
   checkElectrodes();
-  digitalWrite(RTC_PIN, LOW);
   Serial.flush();
-  attachInterrupt(digitalPinToInterrupt(RINT), risr, CHANGE);
   attachInterrupt(digitalPinToInterrupt(SINT), sisr, CHANGE);
   sleep_cpu();
 }
